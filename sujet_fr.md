@@ -2,7 +2,7 @@
 
 ### Qu'est ce un appel de fonction?
 
-    Les grand modeles de langage(LLMs)  ont le pouvoir de la comprendre et de la generer le langage humain,  mais ils ne produisent pas naturellement de sortie structure et executable pour la machine.
+    Les grand modeles de langage(LLMs) ont le pouvoir de la comprendre et de la generer le langage humain,  mais ils ne produisent pas naturellement de sortie structure et executable pour la machine.
     L'appel de fonctions comble cette lacune en traduisant les requêtes en langage naturel en appels de fonctions précis avec des arguments typé.
 
 exemple de langage naturel d'appel de fonction:
