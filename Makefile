@@ -4,7 +4,6 @@ SRC = src
 
 run:
 	uv run $(PYTHON) -m $(SRC)
-	
 
 install:
 	uv sync
