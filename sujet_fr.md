@@ -88,7 +88,26 @@ output <output_file>]`
 ## Partie obligatoire
 
 ### sommaire
-dans ce projet, tu devra creer un outil d'appel de fonction qui traduit le prompt en langage naturel en appel de fonctions structures. donne une question comme "quelle est la somme de 40 et de 2?", ta solution ne devra pas retourner 42 mais fournir:
+dans ce projet, tu devra creer un outil d'appel de fonction qui traduit le prompt en langage naturel en appel de fonctions structure
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+s. donne une question comme "quelle est la somme de 40 et de 2?", ta solution ne devra pas retourner 42 mais fournir:
 - le nom de la fonction: fn_add_numbers
 - les arguments: {"a": 40.0, "b": 2.0}
 

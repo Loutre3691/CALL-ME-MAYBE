@@ -1,37 +1,28 @@
 from pydantic import BaseModel, ValidationError
 import sys
 
+
 class ParsingInput(BaseModel):
     prompt: str
 
 
 class ParsingType(BaseModel):
     type: str
-    
+
 
 class ParsingFunction(BaseModel):
     name: str
     description: str
     parameters: dict[str, ParsingType]
-    returns: ParsingType 
+    returns: ParsingType
 
 
-class ConfigParsing():
+class ConfigParsing(BaseModel):
     """
     Parsing des prompts json
     """
-    def __init__(self, prompt_input: list[dict], prompt_functions: list[dict]) -> None:
-        self.prompt_input = prompt_input
-        self.prompt_functions = prompt_functions
-        self.prompt_list_input = []
-        self.prompt_list_functions = []
-
-        self.parse_prompt_input(self.prompt_input)
-        self.parse_prompt_functions(self.prompt_functions)
-        print(self.prompt_list_input)
-        print(self.prompt_list_functions)
-
-
+    prompt_list_input: list[ParsingInput] = []
+    prompt_list_functions: list[ParsingFunction] = []
 
     def parse_prompt_input(self, prompt_input: list[dict]) -> None:
         for i in prompt_input:
@@ -48,12 +39,8 @@ class ConfigParsing():
             try:
                 obj = ParsingFunction.model_validate(i)
                 self.prompt_list_functions.append(obj)
-                
+
             except ValidationError:
-                print("\033[0;31mError: Prompt_functions is not valid\n\033[0m")
+                print("\033[0;31mError: Prompt_functions "
+                      "is not valid\n\033[0m")
                 sys.exit(1)
-
-
-
-
-    

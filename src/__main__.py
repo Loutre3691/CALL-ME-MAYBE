@@ -3,10 +3,11 @@ import sys
 import json
 import argparse
 
+
 def load_json(path):
     """Fonction reutilisabe pour le chargement et ouverture des json
     Args:
-        path: path du JSON file 
+        path: path du JSON file
     Returns:
         le contenu du fichier json(list ou dict)
     """
@@ -33,19 +34,23 @@ def load_json(path):
 
     return data_json
 
+
 if __name__ == "__main__":
     """
-    argparse permet a l'user de choice her files, add_argument permet d'add arguments 
+    argparse permet a l'user de choice her files, add_argument
+    permet d'add arguments
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--functions_definition", default="data/input/functions_definition.json")    
+    parser.add_argument("--functions_definition",
+                        default="data/input/functions_definition.json")
     parser.add_argument("--output", default="data/output/function_calls.json")
-    parser.add_argument("--input", default="data/input/function_calling_tests.json")
+    parser.add_argument("--input",
+                        default="data/input/function_calling_tests.json")
     args = parser.parse_args()
+    config = ConfigParsing()
 
     data_fcalling_tests = load_json(args.input)
     data_fdefinition = load_json(args.functions_definition)
 
-    ConfigParsing(data_fcalling_tests, data_fdefinition)
-
-
+    config.parse_prompt_input(data_fcalling_tests)
+    config.parse_prompt_functions(data_fdefinition)
