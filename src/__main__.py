@@ -2,6 +2,7 @@ from src.parsing import ConfigParsing
 import sys
 import json
 import argparse
+from src.generator import transorm_text_in_numero
 
 
 def load_json(path):
@@ -52,5 +53,7 @@ if __name__ == "__main__":
     data_fcalling_tests = load_json(args.input)
     data_fdefinition = load_json(args.functions_definition)
 
-    config.parse_prompt_input(data_fcalling_tests)
-    config.parse_prompt_functions(data_fdefinition)
+    list_input = config.parse_prompt_input(data_fcalling_tests)
+    list_functions = config.parse_prompt_functions(data_fdefinition)
+
+    transorm_text_in_numero(list_input, list_functions)
