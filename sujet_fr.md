@@ -235,7 +235,7 @@ Le processus de génération LLM suit les étapes suivantes :
 *À ce stade, des techniques comme le ****constrained decoding**** peuvent être appliquées pour restreindre les choix de token et garantir que les sorties suivent une structure spécifique, comme la génération d'un JSON 100 % valide.*
 
 
-`⚠️ Ce processus se repete jeton par jeton. chaque jeton genere est ajoute au prompt, et les étapes 2 à 6 se répètent jusqu'à ce que la réponse complète soit générée.`
+`⚠️ Ce processus se repete token par token. chaque token genere est ajoute au prompt, et les étapes 2 à 6 se répètent jusqu'à ce que la réponse complète soit générée.`
 
 **Vue simplifiee** :
             `Prompt -> Tokenization -> Input IDs -> LLM -> Logits -> Next Token Selection`
@@ -253,7 +253,7 @@ Les modeles de langage genere du texte un token a la fois. A chaque etape, le mo
 Dans ce projet, **constrained deconding** doit non seulement garantir un JSON syntaxiquement valide, mais aussi imposer un schéma spécifique. Par exemple, si un champ est limité à un nombre dans `functions_definition.json`, le décodeur restreint la sélection des token aux valeurs de type flottant, préservant ainsi la validité JSON et la conformité au schéma.
 Ca garantit que chaque token generes maintient une valditite structurelle et semantique, tout en respectant le shema requis. Par conséquent, le JSON produit est récupérable à 100 % et peut toujours être analysé sans erreur.
 
-`Réfléchissez à la manière dont vous pouvez utiliser le fichier JSON du vocabulaire pour établir une correspondance entre les tokent et leurs représentations textuelles. Ceci est essentiel pour déterminer quels token sont valides à chaque étape de génération.`
+`Réfléchissez à la manière dont vous pouvez utiliser le fichier JSON du vocabulaire pour établir une correspondance entre les token et leurs représentations textuelles. Ceci est essentiel pour déterminer quels token sont valides à chaque étape de génération.`
  
 ## format du fichier de sortie
 
