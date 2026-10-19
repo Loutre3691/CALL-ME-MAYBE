@@ -23,37 +23,42 @@ def create_text(input_text: object, list_functions: list) -> str:
     return new_text
 
 
-def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: object) -> None:
+def constrained_decoding(model: object, token: list, vocab_inverse: dict, allowed: str, generated: str,
+                        functions: list) -> str:
+    # le LLM lit toute la liste d’ids et donne une note 
+    # à chaque token possible du vocabulaire”
+    logits = model.get_logits_from_input_ids(token)
+
+    for pos in range(len(logits)):
+        # le .get eevite les edge case si l'id du logits est au dessus du nombre 
+        # d'id dans le vocab du llm, ca en cree un "" qui sera en -inf juste apres        
+        text_vocab = vocab_inverse.get(pos, "")
+        bad_char = allowed != "" and not all(c in allowed for c in text_vocab)
+        bad_function = not any(function.startswith(generated + text_vocab) for function in functions)
+
+        # permet de mettre -inf a tous les ids des notes qui en correspondent 
+        # pas a ce qui il y a dans les token de la string prompt + function 
+        if bad_char or text_vocab == "" or bad_function:
+            logits[pos] = -numpy.inf
+    # argmax permet de chercher la position du logits max dans les token
+    # next_id recupere l'id du logits max
+    next_id = int(numpy.argmax(logits))
+    token.append(next_id)
+    token_str = model.decode(next_id)
+    return(generated + token_str)
+
+
+def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: object, functions: list) -> None:
     allowed = "0123456789.-},"
 
     for key, value in parameters.items():
-        value_generated = ""
+        generated = ""
         nbr_tour = 0
-        while "}" not in value_generated and "," not in value_generated and nbr_tour < 20:
-            logits = model.get_logits_from_input_ids(token)
-
-            for pos in range(len(logits)):
-                text_vocab = vocab_inverse.get(pos, "")
-
-                if text_vocab == "" or not all(c in allowed for c in text_vocab):
-                    logits[pos] = -numpy.inf
-
-            next_id = int(numpy.argmax(logits))
-            token.append(next_id)
-            value_generated += vocab_inverse[next_id]
+        while "}" not in generated and "," not in generated and nbr_tour < 20:
+            generated = constrained_decoding(model, token, vocab_inverse, allowed, generated, functions)
+            print(generated)
             nbr_tour += 1
-
-
-
-
-
-
-
-
-
-        
-        
- 
+            
 
 def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
 # 1. encode    : la question devient une liste d'ids
@@ -84,31 +89,11 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
         token = tokens[0]
 
         generated = ""
+        allowed = ""
         nbr_tour = 0
-        while generated not in functions and nbr_tour < 20:
-            # le LLM lit toute la liste d’ids et donne une note 
-            # à chaque token possible du vocabulaire”
-            logits = model.get_logits_from_input_ids(token)
-
-            # permet de mettre -inf a tous les ids des notes qui en correspondent 
-            # pas a ce qui il y a dans les token de la string prompt + function
-            # cest le constrained decoding
-            for pos in range(len(logits)):
-                # le .get eevite les edge case si l'id du logits est au dessus du nombre 
-                # d'id dans le vocab du llm, ca en cree un "" qui sera en -inf juste apres
-                text_vocab = vocab_inverse.get(pos, "")
-                
-                #  permet de savoir si la function commence par text_vocab + generated sinon met -inf
-                if text_vocab == "" or not any(function.startswith(generated + text_vocab) 
-                                                for function in functions) :
-                    logits[pos] = -numpy.inf
-
-            # argmax permet de chercher la position du logits max dans les token
-            #  next_id recupere l'id du logits max
-            next_id = int(numpy.argmax(logits))
-            token.append(next_id)
-            generated += vocab_inverse[next_id]
-            decod = model.decode(token)
+        while generated not in functions and nbr_tour < 20 :
+            generated = constrained_decoding(model, token, vocab_inverse, allowed, generated, functions)
+            print(generated)
             nbr_tour += 1
 
         if generated not in functions:
@@ -116,7 +101,8 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
 
         for f in list_functions:
             if generated == f.name:
-                write_parameter(f.parameters, token, vocab_inverse, model)
+                generated = write_parameter(f.parameters, token, vocab_inverse, model, functions)
+                
 
 
                 
