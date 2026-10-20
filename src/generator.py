@@ -81,11 +81,12 @@ def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: o
             token.append(next_id)
             token_str = model.decode(next_id)
             generated = generated + token_str
+            new = generated.rstrip(",}")
 
-        # range la valeur 
-        result[key] = generated
+        # range la valeur
+        result[key] = new
+
     return result
-
 
         
 def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
