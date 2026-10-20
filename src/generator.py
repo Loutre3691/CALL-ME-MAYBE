@@ -8,7 +8,6 @@ def ft_vocab_inverse(vocab: dict) -> dict:
     inverse = {}
     for key, value in vocab.items():
         inverse[value] = key
-
     return inverse
 
 
@@ -23,8 +22,19 @@ def create_text(input_text: object, list_functions: list) -> str:
     return new_text
 
 
-def constrained_decoding(model: object, token: list, vocab_inverse: dict, allowed: str, generated: str,
-                        functions: list) -> str:
+def rules_name_function(candidat: str, functions: list) -> bool:
+    return any(function.startswith(candidat) for function in functions)
+
+
+def rules_number_parameters(text: str, fucntions: list) -> bool:
+    for c in text:
+        if c not in "0123456789.-}," or text[0] == "." or text.count(".") > 1:
+            return False
+    return True
+
+
+def constrained_decoding(model: object, token: list, vocab_inverse: dict, generated: str,
+                        functions: list, mode: str) -> int:
     # le LLM lit toute la liste d’ids et donne une note 
     # à chaque token possible du vocabulaire”
     logits = model.get_logits_from_input_ids(token)
@@ -33,33 +43,51 @@ def constrained_decoding(model: object, token: list, vocab_inverse: dict, allowe
         # le .get eevite les edge case si l'id du logits est au dessus du nombre 
         # d'id dans le vocab du llm, ca en cree un "" qui sera en -inf juste apres        
         text_vocab = vocab_inverse.get(pos, "")
-        bad_char = allowed != "" and not all(c in allowed for c in text_vocab)
-        bad_function = not any(function.startswith(generated + text_vocab) for function in functions)
+
+        if mode == "number":
+            rule = rules_number_parameters((generated + text_vocab), functions)
+        else:
+            rule = rules_name_function((generated + text_vocab), functions)
 
         # permet de mettre -inf a tous les ids des notes qui en correspondent 
         # pas a ce qui il y a dans les token de la string prompt + function 
-        if bad_char or text_vocab == "" or bad_function:
+        if text_vocab == "" or rule == False:
             logits[pos] = -numpy.inf
+
     # argmax permet de chercher la position du logits max dans les token
     # next_id recupere l'id du logits max
     next_id = int(numpy.argmax(logits))
-    token.append(next_id)
-    token_str = model.decode(next_id)
-    return(generated + token_str)
+    return next_id
 
 
-def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: object, functions: list) -> None:
-    allowed = "0123456789.-},"
-
+def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: object, functions: list) -> dict:
+    result = {}
     for key, value in parameters.items():
+        # ecriture du code JSON
+        if not result:
+            text = '{"' + key + '": '
+        else:
+            text = ',"' + key + '": '
+
+        # texte deviens toekn puis ajout avec extend a ce que lit le model
+        token.extend(model.encode(text).tolist()[0])
+
+        # model ecrit la valeur
         generated = ""
         nbr_tour = 0
         while "}" not in generated and "," not in generated and nbr_tour < 20:
-            generated = constrained_decoding(model, token, vocab_inverse, allowed, generated, functions)
-            print(generated)
+            next_id = constrained_decoding(model, token, vocab_inverse, generated, functions, "number")
             nbr_tour += 1
-            
+            token.append(next_id)
+            token_str = model.decode(next_id)
+            generated = generated + token_str
 
+        # range la valeur 
+        result[key] = generated
+    return result
+
+
+        
 def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
 # 1. encode    : la question devient une liste d'ids
 #                 "Reverse the string..." → [45695, 279, 914, ...]
@@ -89,19 +117,29 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
         token = tokens[0]
 
         generated = ""
-        allowed = ""
+
         nbr_tour = 0
         while generated not in functions and nbr_tour < 20 :
-            generated = constrained_decoding(model, token, vocab_inverse, allowed, generated, functions)
-            print(generated)
+            next_id = constrained_decoding(model, token, vocab_inverse, generated, functions, "name")
             nbr_tour += 1
+            token.append(next_id)
+            token_str = model.decode(next_id)
+            generated = generated + token_str
+
 
         if generated not in functions:
             print(f"Error: {generated} is not in functions list")
 
         for f in list_functions:
             if generated == f.name:
-                generated = write_parameter(f.parameters, token, vocab_inverse, model, functions)
+                result = write_parameter(f.parameters, token, vocab_inverse, model, functions)
+                print(result)
+
+                
+
+
+            
+                
                 
 
 
