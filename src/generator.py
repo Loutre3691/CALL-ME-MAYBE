@@ -78,6 +78,7 @@ def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: o
         if mode == "string":
             text += '"'
 
+
         # texte deviens token puis ajout avec extend a ce que lit le model
         token.extend(model.encode(text).tolist()[0])
 
@@ -152,8 +153,11 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
                         result = write_parameter(f.parameters, token, vocab_inverse, model, functions, "number")
                     else:
                         result = write_parameter(f.parameters, token, vocab_inverse, model, functions, "string")
-        print(result)
+        if value.type == "number":
+            for key, value in result.items():
+                result[key] = float(value)
 
+        print(result)
         
         
 
