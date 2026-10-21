@@ -12,15 +12,15 @@ def ft_vocab_inverse(vocab: dict) -> dict:
 
 
 def create_text(input_text: object, list_functions: list) -> str:
-    prompt = input_text.prompt
-    functions = []
+    prompt = "\nQuestion: " + input_text.prompt
+    funct_desc = []
+    funct_desc.append("Functions: ")
     for f in list_functions:
-        functions.append(f.name)
+        funct_desc.append(f"- {f.name}: {f.description}")
 
-    new_text = " ".join(functions)
-    new_text = " ".join([prompt, new_text])
+    new_text = "\n".join(funct_desc)
+    new_text = "\n".join([new_text, prompt, "Function to call: "])
     return new_text
-
 
 def rules_name_function(candidat: str, functions: list) -> bool:
     return any(function.startswith(candidat) for function in functions)
@@ -32,6 +32,10 @@ def rules_number_parameters(text: str, fucntions: list) -> bool:
             return False
     return True
 
+def rules_string_parameters(text: str) -> bool:
+    if not text.isascii():
+        return False
+    return True
 
 def constrained_decoding(model: object, token: list, vocab_inverse: dict, generated: str,
                         functions: list, mode: str) -> int:
@@ -44,7 +48,9 @@ def constrained_decoding(model: object, token: list, vocab_inverse: dict, genera
         # d'id dans le vocab du llm, ca en cree un "" qui sera en -inf juste apres        
         text_vocab = vocab_inverse.get(pos, "")
 
-        if mode == "number":
+        if mode == "string":
+            rule = rules_string_parameters(generated + text_vocab)
+        elif mode == "number":
             rule = rules_number_parameters((generated + text_vocab), functions)
         else:
             rule = rules_name_function((generated + text_vocab), functions)
@@ -60,7 +66,7 @@ def constrained_decoding(model: object, token: list, vocab_inverse: dict, genera
     return next_id
 
 
-def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: object, functions: list) -> dict:
+def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: object, functions: list, mode: str) -> dict:
     result = {}
     for key, value in parameters.items():
         # ecriture du code JSON
@@ -69,19 +75,22 @@ def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: o
         else:
             text = ',"' + key + '": '
 
-        # texte deviens toekn puis ajout avec extend a ce que lit le model
+        if mode == "string":
+            text += '"'
+
+        # texte deviens token puis ajout avec extend a ce que lit le model
         token.extend(model.encode(text).tolist()[0])
 
         # model ecrit la valeur
         generated = ""
         nbr_tour = 0
-        while "}" not in generated and "," not in generated and nbr_tour < 20:
-            next_id = constrained_decoding(model, token, vocab_inverse, generated, functions, "number")
+        while "}" not in generated and "," not in generated and generated.count('"') < 1 and nbr_tour < 20:
+            next_id = constrained_decoding(model, token, vocab_inverse, generated, functions, mode)
             nbr_tour += 1
             token.append(next_id)
             token_str = model.decode(next_id)
             generated = generated + token_str
-            new = generated.rstrip(",}")
+            new = generated.rstrip('",}')
 
         # range la valeur
         result[key] = new
@@ -108,10 +117,14 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
         vocab = json.load(file)
 
     vocab_inverse = ft_vocab_inverse(vocab)
+    for id, vocab in vocab_inverse.items():
+        vocab_inverse[id] = vocab.replace("Ġ", " ")
+
+
 
     for prompt in list_input:
-        new_text = create_text(prompt, list_functions)
-        tokens = model.encode(new_text)
+        text_functions = create_text(prompt, list_functions)
+        tokens = model.encode(text_functions)
         # tolist permet de reduire en liste
         tokens = tokens.tolist()
         # tokens[0] recuperere la liste interieur qui contiens tous les ids de la phrase
@@ -127,38 +140,20 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
             token_str = model.decode(next_id)
             generated = generated + token_str
 
-
+        print(f"prompt:{prompt.prompt}")
+        print(f"generer: {generated}")
         if generated not in functions:
             print(f"Error: {generated} is not in functions list")
 
         for f in list_functions:
             if generated == f.name:
-                result = write_parameter(f.parameters, token, vocab_inverse, model, functions)
-                print(result)
+                for key, value in f.parameters.items():
+                    if value.type == "number":
+                        result = write_parameter(f.parameters, token, vocab_inverse, model, functions, "number")
+                    else:
+                        result = write_parameter(f.parameters, token, vocab_inverse, model, functions, "string")
+        print(result)
 
-                
-
-
-            
-                
-                
-
-
-                
-
-
-
-
-
-
-
-
-
-
-        
-        
-
-    
         
         
 
