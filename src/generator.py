@@ -1,18 +1,20 @@
-import sys
-from llm_sdk import Small_LLM_Model
+from typing import Any
+from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
+from src.parsing import ParsingInput, ParsingFunction
 import numpy
 import json
 import os
 
 
-def ft_vocab_inverse(vocab: dict) -> dict:
-    inverse = {}
+def ft_vocab_inverse(vocab: dict[str, int]) -> dict[int, str]:
+    inverse: dict[int, str] = {}
     for key, value in vocab.items():
         inverse[value] = key
     return inverse
 
 
-def create_text(input_text: object, list_functions: list) -> str:
+def create_text(input_text: ParsingInput,
+                list_functions: list[ParsingFunction]) -> str:
     prompt = "\nQuestion: " + input_text.prompt
     funct_desc = []
     funct_desc.append("Functions: ")
@@ -24,11 +26,11 @@ def create_text(input_text: object, list_functions: list) -> str:
     return new_text
 
 
-def rules_name_function(candidat: str, functions: list) -> bool:
+def rules_name_function(candidat: str, functions: list[str]) -> bool:
     return any(function.startswith(candidat) for function in functions)
 
 
-def rules_number_parameters(text: str, fucntions: list) -> bool:
+def rules_number_parameters(text: str, fucntions: list[str]) -> bool:
     for c in text:
         if c not in "0123456789.-}," or text[0] == "." or text.count(".") > 1:
             return False
@@ -41,21 +43,28 @@ def rules_string_parameters(text: str) -> bool:
     return True
 
 
-def create_list_json(result: dict, list_json: list, generated: str, prompt: str) -> dict:
-    dict_json = {"prompt": prompt.prompt, "name": generated, "parameters": result}
+def create_list_json(result: dict[str, Any], list_json: list[dict[str, Any]],
+                     generated: str, prompt: ParsingInput) -> dict[str, Any]:
+    dict_json = {
+        "prompt": prompt.prompt,
+        "name": generated,
+        "parameters": result,
+    }
 
-    return(dict_json)
-                
+    return dict_json
 
-def constrained_decoding(model: object, token: list, vocab_inverse: dict, generated: str,
-                        functions: list, mode: str) -> int:
-    # le LLM lit toute la liste d’ids et donne une note 
+
+def constrained_decoding(model: Small_LLM_Model, token: list[int],
+                         vocab_inverse: dict[int, str], generated: str,
+                         functions: list[str], mode: str) -> int:
+    # le LLM lit toute la liste d’ids et donne une note
     # à chaque token possible du vocabulaire”
     logits = model.get_logits_from_input_ids(token)
 
     for pos in range(len(logits)):
-        # le .get eevite les edge case si l'id du logits est au dessus du nombre 
-        # d'id dans le vocab du llm, ca en cree un "" qui sera en -inf juste apres        
+        # le .get eevite les edge case si l'id du logits est au dessus du
+        # nombre d'id dans le vocab du llm, ca en cree un "" qui sera en
+        # -inf juste apres
         text_vocab = vocab_inverse.get(pos, "")
 
         if mode == "string":
@@ -65,9 +74,9 @@ def constrained_decoding(model: object, token: list, vocab_inverse: dict, genera
         else:
             rule = rules_name_function((generated + text_vocab), functions)
 
-        # permet de mettre -inf a tous les ids des notes qui en correspondent 
-        # pas a ce qui il y a dans les token de la string prompt + function 
-        if text_vocab == "" or rule == False:
+        # permet de mettre -inf a tous les ids des notes qui en correspondent
+        # pas a ce qui il y a dans les token de la string prompt + function
+        if text_vocab == "" or not rule:
             logits[pos] = -numpy.inf
 
     # argmax permet de chercher la position du logits max dans les token
@@ -76,8 +85,10 @@ def constrained_decoding(model: object, token: list, vocab_inverse: dict, genera
     return next_id
 
 
-def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: object, functions: list) -> dict:
-    result = {}
+def write_parameter(parameters: dict[str, Any], token: list[int],
+                    vocab_inverse: dict[int, str], model: Small_LLM_Model,
+                    functions: list[str]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
     for key, value in parameters.items():
         mode = value.type
         # ecriture du code JSON
@@ -95,8 +106,10 @@ def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: o
         # model ecrit la valeur
         generated = ""
         nbr_tour = 0
-        while "}" not in generated and "," not in generated and generated.count('"') < 1 and nbr_tour < 20:
-            next_id = constrained_decoding(model, token, vocab_inverse, generated, functions, mode)
+        while ("}" not in generated and "," not in generated
+               and generated.count('"') < 1 and nbr_tour < 20):
+            next_id = constrained_decoding(model, token, vocab_inverse,
+                                           generated, functions, mode)
             nbr_tour += 1
             token.append(next_id)
             token_str = model.decode(next_id)
@@ -109,16 +122,17 @@ def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: o
             result[key] = float(new)
     return result
 
-        
-def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
-# 1. encode    : la question devient une liste d'ids
-#                 "Reverse the string..." → [45695, 279, 914, ...]
-#  2. LLM       : il lit toute la liste et donne une note
-#                 à chaque token du vocabulaire (~150 000 notes)
-#  3. argmax    : la position de la meilleure note
-#                 = l'id du token le plus probable pour la suite
-#  4. append    : on ajoute cet id à la fin de la liste
-#  5. on recommence à l'étape 2 avec la liste plus longue
+
+def transorm_text_in_numero(list_input: list[ParsingInput],
+                            list_functions: list[ParsingFunction]) -> None:
+    # 1. encode    : la question devient une liste d'ids
+    #                 "Reverse the string..." → [45695, 279, 914, ...]
+    #  2. LLM       : il lit toute la liste et donne une note
+    #                 à chaque token du vocabulaire (~150 000 notes)
+    #  3. argmax    : la position de la meilleure note
+    #                 = l'id du token le plus probable pour la suite
+    #  4. append    : on ajoute cet id à la fin de la liste
+    #  5. on recommence à l'étape 2 avec la liste plus longue
     model = Small_LLM_Model()
     functions = []
     for f in list_functions:
@@ -132,20 +146,22 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
     for id, vocab in vocab_inverse.items():
         vocab_inverse[id] = vocab.replace("Ġ", " ")
 
-    list_json = []
+    list_json: list[dict[str, Any]] = []
     for prompt in list_input:
         text_functions = create_text(prompt, list_functions)
         tokens = model.encode(text_functions)
         # tolist permet de reduire en liste
         tokens = tokens.tolist()
-        # tokens[0] recuperere la liste interieur qui contiens tous les ids de la phrase
+        # tokens[0] recuperere la liste interieur qui contiens tous les ids
+        # de la phrase
         token = tokens[0]
 
         generated = ""
 
         nbr_tour = 0
-        while generated not in functions and nbr_tour < 20 :
-            next_id = constrained_decoding(model, token, vocab_inverse, generated, functions, "name")
+        while generated not in functions and nbr_tour < 20:
+            next_id = constrained_decoding(model, token, vocab_inverse,
+                                           generated, functions, "name")
             nbr_tour += 1
             token.append(next_id)
             token_str = model.decode(next_id)
@@ -158,15 +174,12 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
 
         for f in list_functions:
             if generated == f.name:
-                result = write_parameter(f.parameters, token, vocab_inverse, model, functions)
-        
-        list_json.append(create_list_json(result, list_json, generated, prompt))
+                result = write_parameter(f.parameters, token, vocab_inverse,
+                                         model, functions)
+
+        list_json.append(create_list_json(result, list_json, generated,
+                                          prompt))
 
     os.makedirs("data/output", exist_ok=True)
     with open("data/output/function_calls.json", "w") as file:
         json.dump(list_json, file, indent=4)
-
-        
-        
-
-    

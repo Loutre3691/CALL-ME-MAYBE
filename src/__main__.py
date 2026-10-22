@@ -2,10 +2,11 @@ from src.parsing import ConfigParsing
 import sys
 import json
 import argparse
+from typing import Any
 from src.generator import transorm_text_in_numero
 
 
-def load_json(path):
+def load_json(path: str) -> Any:
     """Fonction reutilisabe pour le chargement et ouverture des json
     Args:
         path: path du JSON file
