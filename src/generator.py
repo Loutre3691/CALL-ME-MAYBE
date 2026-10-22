@@ -22,6 +22,7 @@ def create_text(input_text: object, list_functions: list) -> str:
     new_text = "\n".join([new_text, prompt, "Function to call: "])
     return new_text
 
+
 def rules_name_function(candidat: str, functions: list) -> bool:
     return any(function.startswith(candidat) for function in functions)
 
@@ -32,10 +33,12 @@ def rules_number_parameters(text: str, fucntions: list) -> bool:
             return False
     return True
 
+
 def rules_string_parameters(text: str) -> bool:
     if not text.isascii():
         return False
     return True
+
 
 def constrained_decoding(model: object, token: list, vocab_inverse: dict, generated: str,
                         functions: list, mode: str) -> int:
@@ -66,9 +69,10 @@ def constrained_decoding(model: object, token: list, vocab_inverse: dict, genera
     return next_id
 
 
-def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: object, functions: list, mode: str) -> dict:
+def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: object, functions: list) -> dict:
     result = {}
     for key, value in parameters.items():
+        mode = value.type
         # ecriture du code JSON
         if not result:
             text = '{"' + key + '": '
@@ -77,7 +81,6 @@ def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: o
 
         if mode == "string":
             text += '"'
-
 
         # texte deviens token puis ajout avec extend a ce que lit le model
         token.extend(model.encode(text).tolist()[0])
@@ -95,7 +98,8 @@ def write_parameter(parameters: dict, token: list, vocab_inverse: dict, model: o
 
         # range la valeur
         result[key] = new
-
+        if mode == "number":
+            result[key] = float(new)
     return result
 
         
@@ -120,8 +124,6 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
     vocab_inverse = ft_vocab_inverse(vocab)
     for id, vocab in vocab_inverse.items():
         vocab_inverse[id] = vocab.replace("Ġ", " ")
-
-
 
     for prompt in list_input:
         text_functions = create_text(prompt, list_functions)
@@ -148,15 +150,7 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
 
         for f in list_functions:
             if generated == f.name:
-                for key, value in f.parameters.items():
-                    if value.type == "number":
-                        result = write_parameter(f.parameters, token, vocab_inverse, model, functions, "number")
-                    else:
-                        result = write_parameter(f.parameters, token, vocab_inverse, model, functions, "string")
-        if value.type == "number":
-            for key, value in result.items():
-                result[key] = float(value)
-
+                result = write_parameter(f.parameters, token, vocab_inverse, model, functions)
         print(result)
         
         
