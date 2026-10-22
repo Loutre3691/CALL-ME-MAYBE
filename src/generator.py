@@ -2,6 +2,7 @@ import sys
 from llm_sdk import Small_LLM_Model
 import numpy
 import json
+import os
 
 
 def ft_vocab_inverse(vocab: dict) -> dict:
@@ -39,6 +40,12 @@ def rules_string_parameters(text: str) -> bool:
         return False
     return True
 
+
+def create_list_json(result: dict, list_json: list, generated: str, prompt: str) -> dict:
+    dict_json = {"prompt": prompt.prompt, "name": generated, "parameters": result}
+
+    return(dict_json)
+                
 
 def constrained_decoding(model: object, token: list, vocab_inverse: dict, generated: str,
                         functions: list, mode: str) -> int:
@@ -125,6 +132,7 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
     for id, vocab in vocab_inverse.items():
         vocab_inverse[id] = vocab.replace("Ġ", " ")
 
+    list_json = []
     for prompt in list_input:
         text_functions = create_text(prompt, list_functions)
         tokens = model.encode(text_functions)
@@ -143,15 +151,21 @@ def transorm_text_in_numero(list_input: list, list_functions: list) -> None :
             token_str = model.decode(next_id)
             generated = generated + token_str
 
-        print(f"prompt:{prompt.prompt}")
-        print(f"generer: {generated}")
+        # print(f"prompt:{prompt.prompt}")
+        # print(f"generer: {generated}")
         if generated not in functions:
             print(f"Error: {generated} is not in functions list")
 
         for f in list_functions:
             if generated == f.name:
                 result = write_parameter(f.parameters, token, vocab_inverse, model, functions)
-        print(result)
+        
+        list_json.append(create_list_json(result, list_json, generated, prompt))
+
+    os.makedirs("data/output", exist_ok=True)
+    with open("data/output/function_calls.json", "w") as file:
+        json.dump(list_json, file, indent=4)
+
         
         
 
