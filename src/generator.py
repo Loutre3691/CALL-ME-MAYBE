@@ -133,10 +133,15 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
     #                 = l'id du token le plus probable pour la suite
     #  4. append    : on ajoute cet id à la fin de la liste
     #  5. on recommence à l'étape 2 avec la liste plus longue
-    model = Small_LLM_Model()
     functions = []
     for f in list_functions:
         functions.append(f.name)
+
+    if not functions:
+        print("Error: prompt functions_definitions is empty")
+        exit(1)
+
+    model = Small_LLM_Model()
 
     path_vocab = model.get_path_to_vocab_file()
     with open(path_vocab) as file:
@@ -149,6 +154,7 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
     list_json: list[dict[str, Any]] = []
     for prompt in list_input:
         text_functions = create_text(prompt, list_functions)
+
         tokens = model.encode(text_functions)
         # tolist permet de reduire en liste
         tokens = tokens.tolist()
@@ -159,6 +165,7 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
         generated = ""
 
         nbr_tour = 0
+
         while generated not in functions and nbr_tour < 20:
             next_id = constrained_decoding(model, token, vocab_inverse,
                                            generated, functions, "name")
@@ -167,11 +174,15 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
             token_str = model.decode(next_id)
             generated = generated + token_str
 
-        # print(f"prompt:{prompt.prompt}")
-        # print(f"generer: {generated}")
         if generated not in functions:
             print(f"Error: {generated} is not in functions list")
-
+            continue
+            
+        
+        # print(f"prompt:{prompt.prompt}")
+        # print(f"generer: {generated}")
+        
+        
         for f in list_functions:
             if generated == f.name:
                 result = write_parameter(f.parameters, token, vocab_inverse,
