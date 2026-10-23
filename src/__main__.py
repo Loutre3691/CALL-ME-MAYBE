@@ -57,4 +57,5 @@ if __name__ == "__main__":
     list_input = config.parse_prompt_input(data_fcalling_tests)
     list_functions = config.parse_prompt_functions(data_fdefinition)
 
-    transorm_text_in_numero(list_input, list_functions)
+
+    transorm_text_in_numero(list_input, list_functions, args.output)

@@ -124,7 +124,7 @@ def write_parameter(parameters: dict[str, Any], token: list[int],
 
 
 def transorm_text_in_numero(list_input: list[ParsingInput],
-                            list_functions: list[ParsingFunction]) -> None:
+                            list_functions: list[ParsingFunction], output_path: str) -> None:
     # 1. encode    : la question devient une liste d'ids
     #                 "Reverse the string..." → [45695, 279, 914, ...]
     #  2. LLM       : il lit toute la liste et donne une note
@@ -180,6 +180,15 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
         list_json.append(create_list_json(result, list_json, generated,
                                           prompt))
 
-    os.makedirs("data/output", exist_ok=True)
-    with open("data/output/function_calls.json", "w") as file:
-        json.dump(list_json, file, indent=4)
+    try:
+        # os.makedirs -> create directory data/output
+        directory = os.path.dirname(output_path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        with open(output_path, "w") as file:
+            json.dump(list_json, file, indent=4)
+    # OSError atrape filenotfounderror permissionerror et isadirectoryerror ensemble
+    except OSError as e:
+        print(f"Error: {e} problem")
+        exit(1)
+   
