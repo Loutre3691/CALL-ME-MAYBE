@@ -5,6 +5,8 @@ import numpy
 import json
 import os
 
+MAX_NAME_TOKENS = 20
+MAX_TOKENS = 100
 
 def ft_vocab_inverse(vocab: dict[str, int]) -> dict[int, str]:
     inverse: dict[int, str] = {}
@@ -44,10 +46,10 @@ def rules_number_parameters(text: str, fucntions: list[str]) -> bool:
     return True
 
 
-def rules_string_parameters(text: str) -> bool:
-    if not text.isascii():
-        return False
-    return True
+# def rules_string_parameters(text: str) -> bool:
+#     if not text.isascii():
+#         return False
+#     return True
 
 
 def create_list_json(result: dict[str, Any], list_json: list[dict[str, Any]],
@@ -87,7 +89,7 @@ def constrained_decoding(model: Small_LLM_Model, token: list[int],
         text_vocab = vocab_inverse.get(pos, "")
 
         if mode == "string":
-            rule = rules_string_parameters(generated + text_vocab)
+            rule = True
         elif mode == "number":
             rule = rules_number_parameters((generated + text_vocab), functions)
         else:
@@ -125,7 +127,7 @@ def write_parameter(parameters: dict[str, Any], token: list[int],
         # model ecrit la valeur
         generated = ""
         nbr_tour = 0
-        while (nbr_tour < 20 and not is_finished(generated, mode)):
+        while (nbr_tour < MAX_TOKENS and not is_finished(generated, mode)):
             next_id = constrained_decoding(model, token, vocab_inverse,
                                            generated, functions, mode)
             nbr_tour += 1
@@ -136,6 +138,7 @@ def write_parameter(parameters: dict[str, Any], token: list[int],
                 new = generated.split('"')[0]
             else:   
                 new = generated.rstrip('",}')
+
         if mode == "string":
             try:
                 # json.loads() permet de gerer les \ pour le output du regex avec les decimal \d+
@@ -194,7 +197,7 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
 
         nbr_tour = 0
 
-        while generated not in functions and nbr_tour < 20:
+        while generated not in functions and nbr_tour < MAX_NAME_TOKENS:
             next_id = constrained_decoding(model, token, vocab_inverse,
                                            generated, functions, "name")
             nbr_tour += 1
@@ -223,7 +226,7 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
         if directory:
             os.makedirs(directory, exist_ok=True)
         with open(output_path, "w") as file:
-            json.dump(list_json, file, indent=4)
+            json.dump(list_json, file, indent=4, ensure_ascii=False)
     # OSError atrape filenotfounderror permissionerror et isadirectoryerror ensemble
     except OSError as e:
         print(f"Error: {e} problem")

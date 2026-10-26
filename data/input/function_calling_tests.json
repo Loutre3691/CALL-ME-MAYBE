@@ -6,13 +6,14 @@
     "prompt": "What is the sum of 265 and 345?"
   },
   {
-    "prompt":  "Reverse the string ‘Hello, world’"
+    "prompt":  "Reverse the string 'Hello, world'"
   },
+  {"prompt": "Reverse the string 'The quick brown fox jumps over the lazy dog while the cat sleeps peacefully under the warm afternoon sun and the birds sing softly in the tall green trees near the quiet river'"},
   {
     "prompt": "Greet shrek"
   },
   {
-    "prompt": "Greet john, the king"
+    "prompt": "Greet Zoë"
   },
   {
     "prompt": "Reverse the string 'hello'"
