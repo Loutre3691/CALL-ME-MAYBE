@@ -34,6 +34,13 @@ def rules_number_parameters(text: str, fucntions: list[str]) -> bool:
     for c in text:
         if c not in "0123456789.-}," or text[0] == "." or text.count(".") > 1:
             return False
+        if "-" in text[1:]:
+            return False
+
+    number = text.rstrip(",}")
+
+    if number != text and not any(c.isdigit() for c in number):
+        return False
     return True
 
 
@@ -48,7 +55,7 @@ def create_list_json(result: dict[str, Any], list_json: list[dict[str, Any]],
     dict_json = {
         "prompt": prompt.prompt,
         "name": generated,
-        "parameters": result,
+        "parameters": result
     }
 
     return dict_json
@@ -93,9 +100,9 @@ def write_parameter(parameters: dict[str, Any], token: list[int],
         mode = value.type
         # ecriture du code JSON
         if not result:
-            text = '{"' + key + '": '
+            text = '{"' + key + '":'
         else:
-            text = ',"' + key + '": '
+            text = ',"' + key + '":'
 
         if mode == "string":
             text += '"'
@@ -116,8 +123,13 @@ def write_parameter(parameters: dict[str, Any], token: list[int],
             generated = generated + token_str
             new = generated.rstrip('",}')
 
+        if mode == "string":
+            # json.loads() permet de gerer les \ pour le output du regex avec les decimal \d+
+            new = json.loads('"' + new + '"')
+
         # range la valeur
         result[key] = new
+
         if mode == "number":
             result[key] = float(new)
     return result
@@ -177,12 +189,10 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
         if generated not in functions:
             print(f"Error: {generated} is not in functions list")
             continue
-            
-        
+                
         # print(f"prompt:{prompt.prompt}")
         # print(f"generer: {generated}")
-        
-        
+
         for f in list_functions:
             if generated == f.name:
                 result = write_parameter(f.parameters, token, vocab_inverse,
