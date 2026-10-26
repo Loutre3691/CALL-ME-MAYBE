@@ -124,8 +124,11 @@ def write_parameter(parameters: dict[str, Any], token: list[int],
             new = generated.rstrip('",}')
 
         if mode == "string":
-            # json.loads() permet de gerer les \ pour le output du regex avec les decimal \d+
-            new = json.loads('"' + new + '"')
+            try:
+                # json.loads() permet de gerer les \ pour le output du regex avec les decimal \d+
+                new = json.loads('"' + new + '"')
+            except json.JSONDecodeError:
+                print("Error: json text not valid")
 
         # range la valeur
         result[key] = new
