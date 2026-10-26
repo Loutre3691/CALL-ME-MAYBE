@@ -61,6 +61,18 @@ def create_list_json(result: dict[str, Any], list_json: list[dict[str, Any]],
     return dict_json
 
 
+def is_finished(generated: str, mode: str) -> bool:
+    """Return True when the generated value is complete for its type."""
+    if mode == "string":
+        if '"' not in generated:
+            return False
+
+    elif mode == "number":
+        if "}" not in generated and "," not in generated:
+            return False
+    return True
+
+
 def constrained_decoding(model: Small_LLM_Model, token: list[int],
                          vocab_inverse: dict[int, str], generated: str,
                          functions: list[str], mode: str) -> int:
@@ -113,16 +125,17 @@ def write_parameter(parameters: dict[str, Any], token: list[int],
         # model ecrit la valeur
         generated = ""
         nbr_tour = 0
-        while ("}" not in generated and "," not in generated
-               and generated.count('"') < 1 and nbr_tour < 20):
+        while (nbr_tour < 20 and not is_finished(generated, mode)):
             next_id = constrained_decoding(model, token, vocab_inverse,
                                            generated, functions, mode)
             nbr_tour += 1
             token.append(next_id)
             token_str = model.decode(next_id)
             generated = generated + token_str
-            new = generated.rstrip('",}')
-
+            if mode == "string":
+                new = generated.split('"')[0]
+            else:   
+                new = generated.rstrip('",}')
         if mode == "string":
             try:
                 # json.loads() permet de gerer les \ pour le output du regex avec les decimal \d+
