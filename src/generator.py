@@ -8,6 +8,7 @@ import os
 MAX_NAME_TOKENS = 20
 MAX_TOKENS = 100
 
+
 def ft_vocab_inverse(vocab: dict[str, int]) -> dict[int, str]:
     inverse: dict[int, str] = {}
     for key, value in vocab.items():
@@ -108,7 +109,7 @@ def constrained_decoding(model: Small_LLM_Model, token: list[int],
 
 def write_parameter(parameters: dict[str, Any], token: list[int],
                     vocab_inverse: dict[int, str], model: Small_LLM_Model,
-                    functions: list[str]) -> dict[str, Any]:
+                    functions: list[str], visualize: bool) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in parameters.items():
         mode = value.type
@@ -127,21 +128,28 @@ def write_parameter(parameters: dict[str, Any], token: list[int],
         # model ecrit la valeur
         generated = ""
         nbr_tour = 0
+        if visualize:
+            print(text, end="", flush=True)
         while (nbr_tour < MAX_TOKENS and not is_finished(generated, mode)):
             next_id = constrained_decoding(model, token, vocab_inverse,
                                            generated, functions, mode)
             nbr_tour += 1
             token.append(next_id)
             token_str = model.decode(next_id)
+            if visualize:
+                print(token_str, end="", flush=True)
+
             generated = generated + token_str
+            
             if mode == "string":
                 new = generated.split('"')[0]
-            else:   
+            else:
                 new = generated.rstrip('",}')
 
         if mode == "string":
             try:
-                # json.loads() permet de gerer les \ pour le output du regex avec les decimal \d+
+                # json.loads() permet de gerer les \ pour le
+                # output du regex avec les decimal \d+
                 new = json.loads('"' + new + '"')
             except json.JSONDecodeError:
                 print("Error: json text not valid")
@@ -155,7 +163,8 @@ def write_parameter(parameters: dict[str, Any], token: list[int],
 
 
 def transorm_text_in_numero(list_input: list[ParsingInput],
-                            list_functions: list[ParsingFunction], output_path: str) -> None:
+                            list_functions: list[ParsingFunction],
+                            output_path: str, visualize: bool) -> None:
     # 1. encode    : la question devient une liste d'ids
     #                 "Reverse the string..." → [45695, 279, 914, ...]
     #  2. LLM       : il lit toute la liste et donne une note
@@ -196,7 +205,9 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
         generated = ""
 
         nbr_tour = 0
-
+        if visualize:
+            print() 
+            print(prompt.prompt)
         while generated not in functions and nbr_tour < MAX_NAME_TOKENS:
             next_id = constrained_decoding(model, token, vocab_inverse,
                                            generated, functions, "name")
@@ -204,18 +215,20 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
             token.append(next_id)
             token_str = model.decode(next_id)
             generated = generated + token_str
+            # print flush=True force l’envoi immédiat
+            if visualize:
+                print(token_str, end="", flush=True)
+        
+
 
         if generated not in functions:
             print(f"Error: {generated} is not in functions list")
             continue
-                
-        # print(f"prompt:{prompt.prompt}")
-        # print(f"generer: {generated}")
 
         for f in list_functions:
             if generated == f.name:
                 result = write_parameter(f.parameters, token, vocab_inverse,
-                                         model, functions)
+                                         model, functions, visualize)
 
         list_json.append(create_list_json(result, list_json, generated,
                                           prompt))
@@ -227,8 +240,8 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
             os.makedirs(directory, exist_ok=True)
         with open(output_path, "w") as file:
             json.dump(list_json, file, indent=4, ensure_ascii=False)
-    # OSError atrape filenotfounderror permissionerror et isadirectoryerror ensemble
+    # OSError atrape filenotfounderror permissionerror et
+    # isadirectoryerror ensemble
     except OSError as e:
         print(f"Error: {e} problem")
         exit(1)
-   

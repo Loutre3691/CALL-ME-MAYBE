@@ -48,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", default="data/output/function_calls.json")
     parser.add_argument("--input",
                         default="data/input/function_calling_tests.json")
+    parser.add_argument("--visualize", action="store_true")
     args = parser.parse_args()
     config = ConfigParsing()
 
@@ -56,6 +57,4 @@ if __name__ == "__main__":
 
     list_input = config.parse_prompt_input(data_fcalling_tests)
     list_functions = config.parse_prompt_functions(data_fdefinition)
-
-
-    transorm_text_in_numero(list_input, list_functions, args.output)
+    transorm_text_in_numero(list_input, list_functions, args.output, args.visualize)

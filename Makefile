@@ -5,6 +5,9 @@ SRC = src
 run:
 	uv run $(PYTHON) -m $(SRC)
 
+visualize:
+	uv run python3 -m src --visualize
+
 install:
 	uv sync
 
