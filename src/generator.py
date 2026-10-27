@@ -169,7 +169,7 @@ def transorm_text_in_numero(list_input: list[ParsingInput],
     #                 "Reverse the string..." → [45695, 279, 914, ...]
     #  2. LLM       : il lit toute la liste et donne une note
     #                 à chaque token du vocabulaire (~150 000 notes)
-    #  3. argmax    : la position de la meilleure note
+    #  3. argmax    : la position de
     #                 = l'id du token le plus probable pour la suite
     #  4. append    : on ajoute cet id à la fin de la liste
     #  5. on recommence à l'étape 2 avec la liste plus longue
