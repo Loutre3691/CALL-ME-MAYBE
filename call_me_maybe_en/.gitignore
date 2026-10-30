@@ -1,0 +1,10 @@
+# Environnement Python (raccourci vers le goinfre)
+.venv
+
+# Fichiers générés par Python
+__pycache__/
+*.pyc
+
+# Caches des outils de vérification
+.mypy_cache/
+.pytest_cache/
